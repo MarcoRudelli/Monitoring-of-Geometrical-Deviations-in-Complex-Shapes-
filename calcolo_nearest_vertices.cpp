@@ -8,12 +8,13 @@
 
 using namespace std;
 
-constexpr int NUM_VERTS_OVERS = 38920;
+constexpr int NUM_VERTS_OVERS = 38920; // numero vertici triangolazione aumentata
 
-constexpr int NUM_VERTS = 26850;
-constexpr int NUM_TRIANGLES = 53696;
+constexpr int NUM_VERTS = 26850; // numero vertici triangolazione originale
+constexpr int NUM_TRIANGLES = 53696; // numero triangoli triangolazione originale
 
-constexpr double cutoff_range = 6;
+constexpr double cutoff_range_pert = 1; // range massimo per calcolo vertici vicini PER PERTURBAZIONE
+constexpr double cutoff_range_smooth = 6; // range massimo per calcolo vertici vicini PER SMOOTHING GEODETICO
 
 constexpr int NUM_DIMENSIONS = 3;
 
@@ -487,9 +488,6 @@ class kd_tree {
 };
 
 
-// SISTEMARE METODO INSERIMENTO CON TOLLERANZA in get_nearest_dist
-// POTREI ANCHE CALCOLARE PRIMA TUTTE LE INFO NECESSARIE PER LA FUNZIONE closest_point_on_triangle_dist (cioè ab, ac, bc...)
-
 int main() {
     double** verts = nullptr;
     verts = new double*[NUM_VERTS];
@@ -542,7 +540,7 @@ int main() {
             dists[h] = -1.0;
         }
 
-        kd_tree::get_inside_range(verts_overs[i], my_tree, verts, triangles, cutoff_range, dists, is_inside_range);
+        kd_tree::get_inside_range(verts_overs[i], my_tree, verts, triangles, cutoff_range_pert, dists, is_inside_range);
 
         for (int j = 0; j < NUM_TRIANGLES; j++) {
             if (is_inside_range[j]) {
@@ -555,7 +553,7 @@ int main() {
         }
     }
 
-    ofstream output_file ("neigh_verts_list_6.txt");
+    ofstream output_file ("neigh_verts_list_pert.txt");
     if (output_file.is_open()) {
         for(int i1 = 0; i1 < NUM_TRIANGLES; i1++) {
 
@@ -568,6 +566,45 @@ int main() {
     }
     else cout << "Unable to open file";
     output_file.close();
+    
+    
+    list<int> neigh_verts_list_2[NUM_TRIANGLES];
+
+    for (int i = 0; i < NUM_VERTS_OVERS; i++) {
+        bool is_inside_range[NUM_TRIANGLES];
+        double dists[NUM_TRIANGLES];
+        for (int h = 0; h < NUM_TRIANGLES; h++) {
+            is_inside_range[h] = false;
+            dists[h] = -1.0;
+        }
+
+        kd_tree::get_inside_range(verts_overs[i], my_tree, verts, triangles, cutoff_range_smooth, dists, is_inside_range);
+
+        for (int j = 0; j < NUM_TRIANGLES; j++) {
+            if (is_inside_range[j]) {
+                neigh_verts_list_2[j].push_back(i);
+            }
+        }
+
+        if(i % 1000 == 0) {
+            cout << i << endl;
+        }
+    }
+
+    ofstream output_file2 ("neigh_verts_list_smooth.txt");
+    if (output_file2.is_open()) {
+        for(int i1 = 0; i1 < NUM_TRIANGLES; i1++) {
+
+            for (auto const& element : neigh_verts_list_2[i1]) {
+                output_file2 << element << " ";
+            }
+
+            output_file2 << "\n";
+        }
+    }
+    else cout << "Unable to open file";
+    output_file2.close();
+    
 
     kd_tree::delete_kd_tree(my_tree);
 

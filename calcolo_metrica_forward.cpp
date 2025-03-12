@@ -7,27 +7,27 @@
 #include <cmath>
 #include <random>
 #include <vector>
+#include <filesystem>
 // #include <omp.h>
 
 using namespace std;
 
-constexpr int NUM_VERTS = 423875;
-constexpr int NUM_TRIANGLES = 695473;
+constexpr int NUM_PARTS = 150;
+constexpr int NUM_SIMS = 10;
 
-//constexpr int NUM_VERTS_FATHER = 26850;
-//constexpr int NUM_TRIANGLES_FATHER = 53696;
+constexpr int NUM_VERTS = 38920;
+constexpr int NUM_TRIANGLES = 67362;
 
 int NUM_TRIANGLES_BATCH = 100;
 constexpr int NUM_DIMENSIONS = 3;
 
-constexpr double sigma2_boot = 0.04;// 0.0;
 
 constexpr int W = 25;
 
 int NUM_VERTS_SCAN = 0;
 int NUM_TRIANGLES_SCAN = 0;
-constexpr int NUM_BOOT_PER_CENTR = 300;
-//constexpr double AREA_BASELINE = 3739.062; // AREA CAD
+constexpr int NUM_BOOT_PER_CENTR = 100;
+
 int NUM_POINTS_OVERSAMP = NUM_TRIANGLES*NUM_BOOT_PER_CENTR;
 
 void cross(const double a[NUM_DIMENSIONS], const double b[NUM_DIMENSIONS], double * res) {
@@ -522,7 +522,6 @@ class kd_tree {
         }
 };
 
-// ATTENZIONE: POTREI ANCHE CALCOLARE PRIMA TUTTE LE INFO NECESSARIE PER LA FUNZIONE closest_point_on_triangle_dist (cioè ab, ac, bc...)
 
 int main() {
     double** verts = nullptr;
@@ -534,15 +533,6 @@ int main() {
         }
     }
 
-    /*double** verts_father = nullptr;
-    verts_father = new double*[NUM_VERTS_FATHER];
-    for (int h = 0; h < NUM_VERTS_FATHER; h++) {
-        verts_father[h] = new double[NUM_DIMENSIONS];
-        for (int w = 0; w < NUM_DIMENSIONS; w++) {
-            verts_father[h][w] = 0;
-        }
-    }*/
-
     int** triangles = nullptr;
     triangles = new int*[NUM_TRIANGLES];
     for (int h = 0; h < NUM_TRIANGLES; h++) {
@@ -551,39 +541,10 @@ int main() {
             triangles[h][w] = 0;
         }
     }
+    
+    read_matrix_from_csv("CAD DATASETS/CAD_verts_overs.csv", NUM_VERTS, NUM_DIMENSIONS, verts);
+    read_matrix_from_csv("CAD DATASETS/CAD_triangles_overs.csv", NUM_TRIANGLES, 3, triangles);
 
-    /*int** triangles_father = nullptr;
-    triangles_father = new int*[NUM_TRIANGLES_FATHER];
-    for (int h = 0; h < NUM_TRIANGLES_FATHER; h++) {
-        triangles_father[h] = new int[3];
-        for (int w = 0; w < 3; w++) {
-            triangles_father[h][w] = 0;
-        }
-    }*/
-
-    read_matrix_from_csv("/Users/marcorudelli/CLionProjects/metodo_neighbors/CAD DATASETS/CAD_verts_overs.csv", NUM_VERTS, NUM_DIMENSIONS, verts);
-    read_matrix_from_csv("/Users/marcorudelli/CLionProjects/metodo_neighbors/CAD DATASETS/CAD_triangles_overs.csv", NUM_TRIANGLES, 3, triangles);
-
-    /*read_matrix_from_csv("CAD DATASETS/CAD_verts_old.csv", NUM_VERTS_FATHER, NUM_DIMENSIONS, verts_father);
-    read_matrix_from_csv("CAD DATASETS/CAD_triangles_old.csv", NUM_TRIANGLES_FATHER, 3, triangles_father);
-
-    auto* indices = new int[NUM_TRIANGLES_FATHER];
-    for (int i = 0; i < NUM_TRIANGLES_FATHER; i++) {
-        indices[i] = i;
-    }
-    auto* my_tree = new kd_tree(verts_father, triangles_father, 18, indices, NUM_TRIANGLES_FATHER);
-
-    auto* geod_neighbors = new vector<int>[NUM_TRIANGLES];
-    auto* geod_neighbors_count = new short[NUM_TRIANGLES];
-    read_lists_from_csv("CAD DATASETS/geod_neig_tr_count.txt",
-        "CAD DATASETS/geod_neig_tr_list.txt", NUM_TRIANGLES, geod_neighbors_count, geod_neighbors);
-
-    auto* children = new vector<int>[NUM_TRIANGLES_FATHER];
-    auto* children_count = new short[NUM_TRIANGLES_FATHER];
-    read_lists_from_csv("CAD DATASETS/child_tr_count.txt",
-        "CAD DATASETS/child_tr_list.txt", NUM_TRIANGLES_FATHER, children_count, children);*/
-
-    // bool* already_checked = new bool[NUM_TRIANGLES_FATHER];
     
     double* tr_areas = new double[NUM_TRIANGLES];
     double tr_areas_sum = 0.0;
@@ -620,12 +581,13 @@ int main() {
     NUM_POINTS_OVERSAMP = centr_generator_range[NUM_TRIANGLES - 1];
 
     // #pragma omp parallel for num_threads(4)
-    for (int egg_ind = 1; egg_ind <= 21; egg_ind++) {
+    for (int part_ind = 1; part_ind <= NUM_PARTS*NUM_SIMS; part_ind++) {
 
-        cout << "Indice corrente: " << egg_ind << endl;
+        cout << "Indice corrente: " << part_ind << endl;
 
-        NUM_VERTS_SCAN = read_dim_1("/Users/marcorudelli/CLionProjects/metodo_neighbors/SCAN DATASETS/SCAN_verts_" + to_string(egg_ind) + ".csv");
-        NUM_TRIANGLES_SCAN = read_dim_1("/Users/marcorudelli/CLionProjects/metodo_neighbors/SCAN DATASETS/SCAN_triangles_" + to_string(egg_ind) + ".csv");
+        // leggo il numero di vertici e di triangoli
+        NUM_VERTS_SCAN = read_dim_1("parts_simulated/SCAN_verts_" + to_string(part_ind) + ".csv");
+        NUM_TRIANGLES_SCAN = read_dim_1("parts_simulated/SCAN_triangles_" + to_string(part_ind) + ".csv");
 
         double** verts_scan = nullptr;
         verts_scan = new double*[NUM_VERTS_SCAN];
@@ -647,8 +609,8 @@ int main() {
             }
         }
 
-        read_matrix_from_csv("/Users/marcorudelli/CLionProjects/metodo_neighbors/SCAN DATASETS/SCAN_verts_" + to_string(egg_ind) + ".csv", NUM_VERTS_SCAN, NUM_DIMENSIONS, verts_scan, true);
-        read_matrix_from_csv("/Users/marcorudelli/CLionProjects/metodo_neighbors/SCAN DATASETS/SCAN_triangles_" + to_string(egg_ind) + ".csv", NUM_TRIANGLES_SCAN, 3, triangles_scan, true);
+        read_matrix_from_csv("parts_simulated/SCAN_verts_" + to_string(part_ind) + ".csv", NUM_VERTS_SCAN, NUM_DIMENSIONS, verts_scan, true);
+        read_matrix_from_csv("parts_simulated/SCAN_triangles_" + to_string(part_ind) + ".csv", NUM_TRIANGLES_SCAN, 3, triangles_scan, true);
 
         auto* indices = new int[NUM_TRIANGLES_SCAN];
         for (int i = 0; i < NUM_TRIANGLES_SCAN; i++) {
@@ -689,10 +651,6 @@ int main() {
                 }
             }
 
-            //double tmp1 = norm_dist_sc(gen);
-            //double tmp2 = norm_dist_sc(gen);
-            //double tmp3 = norm_dist_sc(gen);
-
             double tmp4 = unif_dist(gen);
             double tmp5 = unif_dist(gen);
             if((tmp4 + tmp5) > 1) {
@@ -711,17 +669,6 @@ int main() {
                 (verts[triangles[i_tr][1]][2] - verts[triangles[i_tr][0]][2]) * tmp4 +
                     (verts[triangles[i_tr][2]][2] - verts[triangles[i_tr][0]][2]) * tmp5;
 
-            //double oversampled_grid[NUM_DIMENSIONS];
-            //oversampled_grid[0] = sp[0] + tmp1;
-            //oversampled_grid[1] = sp[1] + tmp2;
-            //oversampled_grid[2] = sp[2] + tmp3;
-
-            //unsigned int nearest_triangle_ind[12];
-            //for(unsigned int & k : nearest_triangle_ind) {
-            //    k = 999999;
-            //}
-            //uint8_t nearest_triangle_count[1];
-            //nearest_triangle_count[0] = 0;
             vector<unsigned int> nearest_triangle_ind[1];
             vector<double> nearest_triangle_dist[1];
 
@@ -733,50 +680,17 @@ int main() {
 
             double cur_dist = kd_tree::get_nearest_dist(sp, my_tree, verts_scan, triangles_scan, nearest_triangle_ind, nearest_triangle_dist, already_checked, proj_pt_scan);
 
-            /*vector<unsigned int> nearest_triangle_ind_children;
-            for (int nti = 0; nti < nearest_triangle_ind[0].size(); nti++) {
-                for (int child_ind = 0; child_ind < children_count[nearest_triangle_ind[0][nti]]; child_ind++) {
-                    double proj_tmp[NUM_DIMENSIONS];
-                    double d_tmp = closest_point_on_triangle_dist(verts[triangles[children[nearest_triangle_ind[0][nti]][child_ind]][0]],
-                            verts[triangles[children[nearest_triangle_ind[0][nti]][child_ind]][1]],
-                            verts[triangles[children[nearest_triangle_ind[0][nti]][child_ind]][2]],
-                            proj_pt_cad, proj_tmp);
-
-                    if (d_tmp < 1e-10) {
-                        nearest_triangle_ind_children.push_back(children[nearest_triangle_ind[0][nti]][child_ind]);
-                    }
-                }
-            }
-
-            double cur_dist = 100000.0;
-            for (int nti = 0; nti < nearest_triangle_ind_children.size(); nti++) {
-                for (int neigh_ind = 0; neigh_ind < geod_neighbors_count[nearest_triangle_ind_children[nti]]; neigh_ind++) {
-                    double proj_pt_scan[NUM_DIMENSIONS];
-                    double d_tmp = closest_point_on_triangle_dist(verts[triangles[geod_neighbors[nearest_triangle_ind_children[nti]][neigh_ind]][0]],
-                            verts[triangles[geod_neighbors[nearest_triangle_ind_children[nti]][neigh_ind]][1]],
-                            verts[triangles[geod_neighbors[nearest_triangle_ind_children[nti]][neigh_ind]][2]],
-                            sp, proj_pt_scan);
-                    if (cur_dist > d_tmp) {
-                        cur_dist = d_tmp;
-                    }
-                }
-            }
-
-            for(int i_id = 0; i_id < nearest_triangle_ind_children.size(); i_id++) {
-                weighted_dists[nearest_triangle_ind_children[i_id]] += sqrt(cur_dist) / static_cast<double>(nearest_triangle_ind_children.size());
-                weights[nearest_triangle_ind_children[i_id]] += 1.0 / static_cast<double>(nearest_triangle_ind_children.size());
-            }*/
-
             weighted_dists[i_tr] += sqrt(cur_dist);
             weights[i_tr] += 1.0;
 
-            if(i == (NUM_TRIANGLES_BATCH * 1000 - 1) | b == (NUM_POINTS_OVERSAMP - 1)) {
-                cout << "Num punti " << b + 1 << " su " << NUM_POINTS_OVERSAMP << endl;
-            }
+            // if(i == (NUM_TRIANGLES_BATCH * 1000 - 1) | b == (NUM_POINTS_OVERSAMP - 1)) {
+            //     cout << "Num punti " << b + 1 << " su " << NUM_POINTS_OVERSAMP << endl;
+            // }
         }
 
-        ofstream my_file2_2_fin ("/Users/marcorudelli/CLionProjects/metodo_neighbors/RESULTS FORWARD/weights_" + to_string(egg_ind) + ".txt");
-        ofstream my_file2_3_fin ("/Users/marcorudelli/CLionProjects/metodo_neighbors/RESULTS FORWARD/weighted_dists_" + to_string(egg_ind) + ".txt");
+        std::filesystem::create_directory("RESULTS FORWARD");
+        ofstream my_file2_2_fin ("RESULTS FORWARD/weights_" + to_string(part_ind) + ".txt");
+        ofstream my_file2_3_fin ("RESULTS FORWARD/weighted_dists_" + to_string(part_ind) + ".txt");
         if (my_file2_2_fin.is_open()) {
             for(int i1 = 0; i1 < NUM_TRIANGLES; i1++) {
                 my_file2_2_fin << weights[i1] << "\n";
@@ -813,20 +727,6 @@ int main() {
         delete[] verts[h];
     }
     delete[] verts;
-
-    /*for (int h = 0; h < NUM_TRIANGLES_FATHER; h++) {
-        delete[] triangles_father[h];
-    }
-    delete[] triangles_father;
-    for (int h = 0; h < NUM_VERTS_FATHER; h++) {
-        delete[] verts_father[h];
-    }
-    delete[] verts_father;
-
-    // delete[] already_checked;
-
-    delete[] geod_neighbors;
-    delete[] geod_neighbors_count;*/
 
     return 0;
 }

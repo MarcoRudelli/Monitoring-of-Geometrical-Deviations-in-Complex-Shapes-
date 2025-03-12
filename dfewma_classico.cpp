@@ -4,16 +4,14 @@
 #include <string>
 #include <algorithm>
 #include <random>
+#include <filesystem>
 
 using namespace std;
 
-constexpr string sim_name = "2.51";
-constexpr string in_file_name = "LBS"; //CV_quantiles //CV_moments //LBS
-constexpr string out_file_name = "lbs"; //qt //mm //lbs
-constexpr int NUM_COLS = 15; //10; //8; //15;
+constexpr int NUM_COLS = 15;
 
 constexpr int NUM_ROWS = 150;
-constexpr int NUM_SAMPLES = 39;
+constexpr int NUM_SAMPLES = 10;
 
 constexpr int minwin = 1;
 constexpr int maxwin = 10;
@@ -186,7 +184,7 @@ int main() {
                 data_mat[h][w] = 0;
             }
         }
-        read_matrix_from_csv("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/results_SIM" + sim_name + "_" + in_file_name + "/res_SIM" + sim_name + "_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
+        read_matrix_from_csv("results_LBS/parts_simulated_res_LBS_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
         for (int r = 0; r < NUM_ROWS; ++r) {
             for (int c = 0; c < NUM_COLS; ++c) {
                 t_data_mat1[c][r] = data_mat[r][c] + dis(gen);
@@ -212,10 +210,6 @@ int main() {
         }
 
         for (int i = 0; i < kmax; ++i) {
-            //int win_ids[win[i]];
-            //for (int j = 0; j < win[i]; j++) {
-            //    win_ids[win[i] - j - 1] = m0 + i - j;
-            //} // (m0 + i - 0) -> (m0 + i - win[i] + 1)
             int uwl_tmp = m0 + i;
             int lwl_tmp = m0 + 1 + i - win[i];
 
@@ -252,9 +246,7 @@ int main() {
             }
 
             int count = 0;
-            //double t_perm[num_perm + 1];
             double t_perm[num_perm];
-            //t_perm[num_perm] = t_stat[i];
 
             // to check ids: (m0 + i - 1) -> (m0 + i - win[i] + 1)
             int end_id = max(m0+i-win[i]+1, m0);
@@ -286,11 +278,6 @@ int main() {
                                 if (working_tmp1[j+1][c] < working_tmp1[k][c]) {
                                     --working_tmp1[k][c];
                                 }
-                                //else {
-                                //    if (working_tmp1[j+1][c] == working_tmp1[k][c]) {
-                                //        working_tmp1[k][c] -= 0.5;
-                                //    }
-                                //}
                             }
                         }
 
@@ -364,9 +351,8 @@ int main() {
                 }
             }
 
-            sort(t_perm, t_perm + (num_perm)); //+ 1));
+            sort(t_perm, t_perm + (num_perm));
 
-            //lim[i] = t_perm[static_cast<int>(ceil((num_perm + 1) * (1 - alpha_err)))] + 1e-12;
             lim[i] = t_perm[static_cast<int>(ceil((num_perm) * (1 - alpha_err)))] + 1e-12;
 
             cout << i << endl;
@@ -376,9 +362,9 @@ int main() {
             }
         }
 
-
-        ofstream output_file ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_old_" + out_file_name + "/lim_" + to_string(s_ind+1) + ".txt");
-        ofstream output_file2 ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_old_" + out_file_name + "/t_stat_" + to_string(s_ind+1) + ".txt");
+        std::filesystem::create_directory("res_surv_old");
+        ofstream output_file ("res_surv_old/lim_" + to_string(s_ind+1) + ".txt");
+        ofstream output_file2 ("res_surv_old/t_stat_" + to_string(s_ind+1) + ".txt");
         if (output_file.is_open()) {
             for (int i2 = 0; i2 < kmax; ++i2) {
                 output_file << lim[i2] << "\n";
@@ -389,7 +375,7 @@ int main() {
         output_file.close();
         output_file2.close();
 
-        ofstream output_file4 ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_old_" + out_file_name + "/tmp2_" + to_string(s_ind+1) + ".txt");
+        ofstream output_file4 ("res_surv_old/tmp2_" + to_string(s_ind+1) + ".txt");
         if (output_file4.is_open()) {
             for(int i1 = 0; i1 < kmax; ++i1) {
                 for (int i2 = 0; i2 < NUM_COLS; ++i2) {

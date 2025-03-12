@@ -4,27 +4,25 @@
 #include <string>
 #include <algorithm>
 #include <random>
+#include <filesystem>
 
 using namespace std;
 
-constexpr string sim_name = "2.61";
-
-constexpr int NUM_COLS = 16840; //10; //16840 //6145;
-constexpr int NUM_ROWS = 150; //1000; //150;
-constexpr int NUM_SAMPLES = 39; //300; //100;
+constexpr int NUM_COLS = 16840;
+constexpr int NUM_ROWS = 150;
+constexpr int NUM_SAMPLES = 10;
 
 constexpr int minwin = 1;
 constexpr int maxwin = 10;
-constexpr int kmax = 50; //900; //50;
+constexpr int kmax = 50;
 constexpr int m0 = 100;
 
 constexpr int num_perm = 25000;
 
-constexpr int num_stats = 4 * 2;
-//constexpr double quantiles[num_stats] = {0.01, 0.1, 0.5, 0.9, 0.99};
+constexpr int num_stats = 4 * 2; // numero statistiche di controllo
 
 constexpr double lambda = 0.01;
-constexpr double alpha_err = 0.005;
+constexpr double alpha_err = 0.005; // ARL0 = 200
 
 int read_dim_1(const string& file_name) {
     ifstream file(file_name);
@@ -100,17 +98,6 @@ void read_matrix_from_csv(const string& file_name, int dim1, int dim2, int** mat
 }
 
 int main() {
-    //int rl[NUM_SAMPLES];
-    double** norm_quantile_mat = nullptr;
-    norm_quantile_mat = new double*[kmax];
-    for (int h = 0; h < kmax; ++h) {
-        norm_quantile_mat[h] = new double[m0+kmax];
-        for (int w = 0; w < m0+kmax; ++w) {
-            norm_quantile_mat[h][w] = 0;
-        }
-    }
-    read_matrix_from_csv("/Volumes/EXTERNAL_USB/norm_quantile_mat.csv", kmax, m0+kmax, norm_quantile_mat);
-
     double** data_mat1 = nullptr;
     data_mat1 = new double*[NUM_ROWS];
     for (int h = 0; h < NUM_ROWS; ++h) {
@@ -141,10 +128,6 @@ int main() {
         if (win[i] > maxwin) {
             win[i] = maxwin;
         }
-
-        //int sampleNum = i + 1 + m0;
-
-        //constexpr double lam = 1.0-lambda;
     }
     double working_weight[maxwin];
     for (int i = 0; i < maxwin; ++i) {
@@ -169,7 +152,7 @@ int main() {
         }
     }
 
-    for(int s_ind = 20; s_ind < NUM_SAMPLES; ++s_ind) {
+    for(int s_ind = 0; s_ind < NUM_SAMPLES; ++s_ind) {
         cout << s_ind + 1 << endl;
         double** data_mat = nullptr;
         data_mat = new double*[NUM_ROWS];
@@ -180,21 +163,21 @@ int main() {
             }
         }
 
-        read_matrix_from_csv("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/area_warp_smooth_mats/area_warp_mat_smooth_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
+        read_matrix_from_csv("area_warp_smooth_mats/area_warp_mat_smooth_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
         for (int r = 0; r < NUM_ROWS; ++r) {
             for (int c = 0; c < NUM_COLS; ++c) {
                 data_mat1[r][c] = data_mat[r][c] + dis(gen);
             }
         }
 
-        read_matrix_from_csv("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/backward_dist_mats/backward_dist_smooth_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
+        read_matrix_from_csv("backward_dist_mats/backward_dist_smooth_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
         for (int r = 0; r < NUM_ROWS; ++r) {
             for (int c = 0; c < NUM_COLS; ++c) {
                 data_mat2[r][c] = data_mat[r][c] + dis(gen);
             }
         }
 
-        read_matrix_from_csv("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/forward_dist_mats/forward_dist_smooth_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
+        read_matrix_from_csv("forward_dist_mats/forward_dist_smooth_" + to_string(s_ind+1) + ".csv", NUM_ROWS, NUM_COLS, data_mat);
         for (int r = 0; r < NUM_ROWS; ++r) {
             for (int c = 0; c < NUM_COLS; ++c) {
                 double tmp = dis(gen);
@@ -228,15 +211,9 @@ int main() {
         }
 
         for (int i = 0; i < kmax; ++i) {
-            //double* cur_norm_quantiles =  norm_quantile_mat[i];
-            //int win_ids[win[i]];
-            //for (int j = 0; j < win[i]; j++) {
-            //    win_ids[win[i] - j - 1] = m0 + i - j;
-            //} // (m0 + i - 0) -> (m0 + i - win[i] + 1)
             int uwl_tmp = m0 + i;
             int lwl_tmp = m0 + 1 + i - win[i];
 
-            //int rank_v_tmp[m0 + 1 + i];
             double samp_mean1[NUM_COLS];
             double samp_mean_sq1[NUM_COLS];
             double samp_mean2[NUM_COLS];
@@ -338,13 +315,8 @@ int main() {
             }
 
             int count = 0;
-            //double t_perm[num_stats][num_perm + 1];
             double t_perm[num_stats][num_perm];
-            //for(int sid = 0; sid < num_stats; ++sid){
-            //    t_perm[sid][num_perm] = t_stat[sid][i];
-            //}
 
-            // to check ids: (m0 + i - 1) -> (m0 + i - win[i] + 1)
             int end_id = max(m0+i-win[i]+1, m0);
             int st_id = m0 + i - 1;
             int min_id = end_id - win[end_id - m0] + 1;
@@ -364,15 +336,25 @@ int main() {
                     for (int j = 0; j < working_size; ++j) {
                         for (int c = 0; c < NUM_COLS; ++c) {
                             working_tmp1[j][c] = data_mat1[working_samp[j]][c];
-                            working_tmp2[j][c] = data_mat1[working_samp[j]][c];
+                            working_tmp2[j][c] = data_mat2[working_samp[j]][c];
                         }
+                    }
+                    
+                    double samp_mean1_cpy[NUM_COLS];
+                    double samp_mean2_cpy[NUM_COLS];
+                    double samp_mean_sq1_cpy[NUM_COLS];
+                    double samp_mean_sq2_cpy[NUM_COLS];
+                    for (int c = 0; c < NUM_COLS; ++c) {
+                        samp_mean1_cpy[c] = samp_mean1[c];
+                        samp_mean2_cpy[c] = samp_mean2[c];
+                        samp_mean_sq1_cpy[c] = samp_mean_sq1[c];
+                        samp_mean_sq2_cpy[c] = samp_mean_sq2[c];
                     }
 
                     for (int j = working_st_id; j >= working_end_id; --j) {
                         // j -> (j - win[i - (st_id - j + 1)] + 1)
 
                         int tmp_i = i - (working_st_id - j + 1);
-                        //double *cur_norm_quantiles_tmp = norm_quantile_mat[tmp_i];
                         int tmp_win_lim = j - win[tmp_i] + 1;
 
                         double t_stat_tmp[num_stats];
@@ -391,10 +373,15 @@ int main() {
                             tmp2_tmp1[c] = 0.0;
                             tmp2_tmp2[c] = 0.0;
 
-                            samp_mean1_tmp[c] = samp_mean1[c];
-                            samp_mean2_tmp[c] = samp_mean2[c];
-                            samp_mean_sq1_tmp[c] = samp_mean_sq1[c];
-                            samp_mean_sq2_tmp[c] = samp_mean_sq2[c];
+                            samp_mean1_cpy[c] -= working_tmp1[j+1][c];
+                            samp_mean2_cpy[c] -= working_tmp2[j+1][c];
+                            samp_mean_sq1_cpy[c] -= working_tmp1[j+1][c] * working_tmp1[j+1][c];
+                            samp_mean_sq2_cpy[c] -= working_tmp2[j+1][c] * working_tmp2[j+1][c];
+                            
+                            samp_mean1_tmp[c] = samp_mean1_cpy[c];
+                            samp_mean2_tmp[c] = samp_mean2_cpy[c];
+                            samp_mean_sq1_tmp[c] = samp_mean_sq1_cpy[c];
+                            samp_mean_sq2_tmp[c] = samp_mean_sq2_cpy[c];
                         }
                         int ww_ind = maxwin;
                         double ww_tmp;
@@ -410,10 +397,10 @@ int main() {
                             }
                         }
                         for (int col = 0; col < NUM_COLS; ++col) {
-                            samp_mean1_tmp[col] /= tmp_win_lim;
-                            samp_mean_sq1_tmp[col] /= tmp_win_lim;
-                            samp_mean2_tmp[col] /= tmp_win_lim;
-                            samp_mean_sq2_tmp[col] /= tmp_win_lim;
+                            samp_mean1_tmp[col] /= (tmp_win_lim + min_id);
+                            samp_mean_sq1_tmp[col] /= (tmp_win_lim + min_id);
+                            samp_mean2_tmp[col] /= (tmp_win_lim + min_id);
+                            samp_mean_sq2_tmp[col] /= (tmp_win_lim + min_id);
 
                             samp_sd1[col] = sqrt(samp_mean_sq1_tmp[col] - samp_mean1_tmp[col]*samp_mean1_tmp[col]);
                             samp_sd2[col] = sqrt(samp_mean_sq2_tmp[col] - samp_mean2_tmp[col]*samp_mean2_tmp[col]);
@@ -563,14 +550,14 @@ int main() {
                 }
             }
 
-            int num_ok = num_perm;// + 1;
-            int alpha = num_perm - 1;//+ 1 - 1; // (num_perm + 1) statistiche in t_perm (ho aggiunto quella osservata)
-            double t_perm_sort[num_stats][num_perm];// + 1];
+            int num_ok = num_perm;
+            int alpha = num_perm - 1;
+            double t_perm_sort[num_stats][num_perm];
             for (int sid = 0; sid < num_stats; ++sid) {
-                for (int p = 0; p < num_perm; ++p) {// + 1; ++p) {
+                for (int p = 0; p < num_perm; ++p) {
                     t_perm_sort[sid][p] = t_perm[sid][p];
                 }
-                sort(t_perm_sort[sid], t_perm_sort[sid] + (num_perm));// + 1));
+                sort(t_perm_sort[sid], t_perm_sort[sid] + (num_perm));
             }
 
             double lims_up_prec[num_stats];
@@ -582,10 +569,10 @@ int main() {
             double lims_down[num_stats];
             for (int sid = 0; sid < num_stats; ++sid) {
                 lims_up[sid] = t_perm_sort[sid][alpha] + 1e-12;
-                lims_down[sid] = t_perm_sort[sid][num_perm - alpha - 1] - 1e-12;//+ 1 - alpha - 1] - 1e-12;
+                lims_down[sid] = t_perm_sort[sid][num_perm - alpha - 1] - 1e-12;
             }
 
-            while(num_ok > (num_perm)*(1-alpha_err)){ //+1)*(1-alpha_err)){
+            while(num_ok > (num_perm)*(1-alpha_err)){
                 alpha_prec = alpha;
                 --alpha;
                 for (int sid = 0; sid < num_stats; ++sid) {
@@ -593,12 +580,12 @@ int main() {
                     lims_down_prec[sid] = lims_down[sid];
 
                     lims_up[sid] = t_perm_sort[sid][alpha] + 1e-12;
-                    lims_down[sid] = t_perm_sort[sid][num_perm - alpha - 1] - 1e-12;// + 1 - alpha - 1] - 1e-12;
+                    lims_down[sid] = t_perm_sort[sid][num_perm - alpha - 1] - 1e-12;
                 }
 
                 num_ok_prec = num_ok;
                 num_ok = 0;
-                for (int c = 0; c < num_perm; ++c) {// + 1; ++c) {
+                for (int c = 0; c < num_perm; ++c) {
                     bool is_ok = true;
                     for (int sid = 0; sid < num_stats; ++sid) {
                         if (t_perm[sid][c] < lims_down[sid] || t_perm[sid][c] > lims_up[sid]) {
@@ -625,19 +612,6 @@ int main() {
                 }
             }
 
-            ofstream output_file_tmp ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/aaa_tperm_analysis/tperm_" + to_string(s_ind+1) + "_" + to_string(i) + ".txt");
-            if (output_file_tmp.is_open()) {
-                for(int i1 = 0; i1 < num_perm; ++i1) {// + 1; ++i1) {
-                    for (int i2 = 0; i2 < num_stats; ++i2) {
-                        output_file_tmp << t_perm_sort[i2][i1] << " ";
-                    }
-                    output_file_tmp << "\n";
-                }
-            }
-            else cout << "Unable to open file";
-            output_file_tmp.close();
-
-            //cout << i << " " << num_ok_prec*1.0/(num_perm+1) << " " << (alpha_prec+1)*1.0/(num_perm+1) << endl;
             cout << i << " " << num_ok_prec*1.0/(num_perm) << " " << (alpha_prec+1)*1.0/(num_perm) << endl;
             cout << lo_lim[0][i] << " " << lo_lim[1][i] << " " << lo_lim[2][i] << " " << lo_lim[3][i] << endl;
             cout << t_stat[0][i] << " " << t_stat[1][i] << " " << t_stat[2][i] << " " << t_stat[3][i] << endl;
@@ -653,9 +627,10 @@ int main() {
             }
         }
 
-        ofstream output_file ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_new/up_lim_" + to_string(s_ind+1) + ".txt");
-        ofstream output_file2 ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_new/lo_lim_" + to_string(s_ind+1) + ".txt");
-        ofstream output_file3 ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_new/t_stat_" + to_string(s_ind+1) + ".txt");
+        std::filesystem::create_directory("res_surv_new");
+        ofstream output_file ("res_surv_new/up_lim_" + to_string(s_ind+1) + ".txt");
+        ofstream output_file2 ("res_surv_new/lo_lim_" + to_string(s_ind+1) + ".txt");
+        ofstream output_file3 ("res_surv_new/t_stat_" + to_string(s_ind+1) + ".txt");
         if (output_file.is_open()) {
             for(int i1 = 0; i1 < num_stats; ++i1) {
                 for (int i2 = 0; i2 < kmax; ++i2) {
@@ -674,7 +649,7 @@ int main() {
         output_file2.close();
         output_file3.close();
 
-        ofstream output_file4 ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_new/tmp2_1_" + to_string(s_ind+1) + ".txt");
+        ofstream output_file4 ("res_surv_new/tmp2_1_" + to_string(s_ind+1) + ".txt");
         if (output_file4.is_open()) {
             for(int i1 = 0; i1 < kmax; ++i1) {
                 for (int i2 = 0; i2 < NUM_COLS; ++i2) {
@@ -685,7 +660,7 @@ int main() {
         }
         else cout << "Unable to open file";
         output_file4.close();
-        ofstream output_file5 ("/Volumes/EXTERNAL_USB/sim_" + sim_name + "/res_surv_new/tmp2_2_" + to_string(s_ind+1) + ".txt");
+        ofstream output_file5 ("res_surv_new/tmp2_2_" + to_string(s_ind+1) + ".txt");
         if (output_file5.is_open()) {
             for(int i1 = 0; i1 < kmax; ++i1) {
                 for (int i2 = 0; i2 < NUM_COLS; ++i2) {
@@ -706,11 +681,6 @@ int main() {
         delete[] tmp2_2[h];
     }
     delete[] tmp2_2;
-
-    for (int h = 0; h < kmax; ++h) {
-        delete[] norm_quantile_mat[h];
-    }
-    delete[] norm_quantile_mat;
 
     for (int h = 0; h < NUM_ROWS; ++h) {
         delete[] data_mat1[h];

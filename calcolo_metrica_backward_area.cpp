@@ -6,9 +6,13 @@
 #include <cmath>
 #include <random>
 #include <vector>
+#include <filesystem>
 // #include <omp.h>
 
 using namespace std;
+
+constexpr int NUM_PARTS = 150;
+constexpr int NUM_SIMS = 10;
 
 constexpr int NUM_VERTS = 38920;
 constexpr int NUM_TRIANGLES = 67362;
@@ -19,7 +23,7 @@ constexpr int NUM_TRIANGLES_FATHER = 53696;
 int NUM_TRIANGLES_BATCH = 100;
 constexpr int NUM_DIMENSIONS = 3;
 
-constexpr double sigma2_boot = 0.04;// 0.0;
+constexpr double sigma2_boot = 0.04;
 
 constexpr int W = 25;
 
@@ -521,7 +525,6 @@ class kd_tree {
         }
 };
 
-// ATTENZIONE: POTREI ANCHE CALCOLARE PRIMA TUTTE LE INFO NECESSARIE PER LA FUNZIONE closest_point_on_triangle_dist (cioè ab, ac, bc...)
 
 int main() {
     double** verts = nullptr;
@@ -582,20 +585,14 @@ int main() {
     read_lists_from_csv("CAD DATASETS/child_tr_count.txt",
         "CAD DATASETS/child_tr_list.txt", NUM_TRIANGLES_FATHER, children_count, children);
 
-    // bool* already_checked = new bool[NUM_TRIANGLES_FATHER];
-
     // #pragma omp parallel for num_threads(4)
-    int egg_ind = 0;
-    for (int egg_ind2 = 0; egg_ind2 < 5000; egg_ind2++) {
-        if(egg_ind2 % 50 == 0){
-            egg_ind += 100;
-        }
-        egg_ind++;
-        
-        cout << "Indice corrente: " << egg_ind << endl;
+    for (int part_ind = 1; part_ind <= NUM_PARTS*NUM_SIMS; part_ind++) {
+    
+        cout << "Indice corrente: " << part_ind << endl;
 
-        NUM_VERTS_SCAN = read_dim_1("/Volumes/EXTERNAL_USB/parts_simulated_SIM2.51/SCAN_verts_" + to_string(egg_ind) + ".csv");
-        NUM_TRIANGLES_SCAN = read_dim_1("/Volumes/EXTERNAL_USB/parts_simulated_SIM2.51/SCAN_triangles_" + to_string(egg_ind) + ".csv");
+        // leggo il numero di vertici e di triangoli
+        NUM_VERTS_SCAN = read_dim_1("parts_simulated/SCAN_verts_" + to_string(part_ind) + ".csv");
+        NUM_TRIANGLES_SCAN = read_dim_1("parts_simulated/SCAN_triangles_" + to_string(part_ind) + ".csv");
 
         double** verts_scan = nullptr;
         verts_scan = new double*[NUM_VERTS_SCAN];
@@ -619,8 +616,8 @@ int main() {
 
         NUM_POINTS_OVERSAMP = NUM_TRIANGLES_SCAN*NUM_BOOT_PER_CENTR;
 
-        read_matrix_from_csv("/Volumes/EXTERNAL_USB/parts_simulated_SIM2.51/SCAN_verts_" + to_string(egg_ind) + ".csv", NUM_VERTS_SCAN, NUM_DIMENSIONS, verts_scan, true);
-        read_matrix_from_csv("/Volumes/EXTERNAL_USB/parts_simulated_SIM2.51/SCAN_triangles_" + to_string(egg_ind) + ".csv", NUM_TRIANGLES_SCAN, 3, triangles_scan, true);
+        read_matrix_from_csv("parts_simulated/SCAN_verts_" + to_string(part_ind) + ".csv", NUM_VERTS_SCAN, NUM_DIMENSIONS, verts_scan, true);
+        read_matrix_from_csv("parts_simulated/SCAN_triangles_" + to_string(part_ind) + ".csv", NUM_TRIANGLES_SCAN, 3, triangles_scan, true);
 
         double tr_areas_scan[NUM_TRIANGLES_SCAN];
         double tr_areas_sum = 0.0;
@@ -718,12 +715,6 @@ int main() {
             oversampled_grid[1] = sp[1] + tmp2;
             oversampled_grid[2] = sp[2] + tmp3;
 
-            //unsigned int nearest_triangle_ind[12];
-            //for(unsigned int & k : nearest_triangle_ind) {
-            //    k = 999999;
-            //}
-            //uint8_t nearest_triangle_count[1];
-            //nearest_triangle_count[0] = 0;
             vector<unsigned int> nearest_triangle_ind[1];
             vector<double> nearest_triangle_dist[1];
 
@@ -769,13 +760,14 @@ int main() {
                 weights[nearest_triangle_ind_children[i_id]] += 1.0 / static_cast<double>(nearest_triangle_ind_children.size());
             }
 
-            //if(i == (NUM_TRIANGLES_BATCH * 1000 - 1) | b == (NUM_POINTS_OVERSAMP - 1)) {
-            //    cout << "Num punti " << b + 1 << " su " << NUM_POINTS_OVERSAMP << endl;
-            //}
+            // if(i == (NUM_TRIANGLES_BATCH * 1000 - 1) | b == (NUM_POINTS_OVERSAMP - 1)) {
+            //     cout << "Num punti " << b + 1 << " su " << NUM_POINTS_OVERSAMP << endl;
+            // }
         }
 
-        ofstream my_file2_2_fin ("/Volumes/EXTERNAL_USB/RESULTS SIMULAZIONE_SIM2.51/weights_" + to_string(egg_ind) + ".txt");
-        ofstream my_file2_3_fin ("/Volumes/EXTERNAL_USB/RESULTS SIMULAZIONE_SIM2.51/weighted_dists_" + to_string(egg_ind) + ".txt");
+        std::filesystem::create_directory("RESULTS BACKWARD");
+        ofstream my_file2_2_fin ("RESULTS BACKWARD/weights_" + to_string(part_ind) + ".txt");
+        ofstream my_file2_3_fin ("RESULTS BACKWARD/weighted_dists_" + to_string(part_ind) + ".txt");
         if (my_file2_2_fin.is_open()) {
             for(int i1 = 0; i1 < NUM_TRIANGLES; i1++) {
                 my_file2_2_fin << weights[i1] << "\n";
@@ -820,8 +812,6 @@ int main() {
         delete[] verts_father[h];
     }
     delete[] verts_father;
-
-    // delete[] already_checked;
 
     delete[] geod_neighbors;
     delete[] geod_neighbors_count;
