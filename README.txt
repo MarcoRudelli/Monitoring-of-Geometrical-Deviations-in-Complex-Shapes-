@@ -6,7 +6,7 @@ CONTENUTI
 - ‘generazione_mesh.m’ (script per la generazione delle mesh simulate)
 - ‘remeshing_CAD_mesh.R’ (script per l’aumento del numero di triangoli della mesh IC originale)
 - ‘calcolo_nearest_vertices.cpp’ (script per il calcolo dei vertici vicini ad ogni triangolo della mesh IC originale)
-- ‘computazione_grafo.R’ (script per il calcolo del grafo utile al calcolo delle distanze geodetiche e per il calcolo dell’intorno di ogni triangolo)
+- ‘computazione_grafo.R’ (script per la computazione del grafo utile al calcolo delle distanze geodetiche e per il calcolo dell’intorno di ogni triangolo)
 - ‘calcolo_metrica_forward.cpp’ e ‘calcolo_metrica_backward_area.cpp’ (script per il caloclo delle metriche Forward, Backward e Area)
 - ‘genera_statistiche_per_dfewma.R’ (script per lo smoothing geodetico delle metriche e la generazione dei csv utili alla sorveglianza delle metriche)
 - ‘dfewma_personalizzato.cpp’ e ‘dfewma_classico.cpp’ (script per l’implementazione ad-hoc e classica della carta DFEWMA)
