@@ -1,6 +1,6 @@
 
 CONTENUTI
-- Chipped1.obj’ e ‘Acceptable.obj’ (mesh modello IC e modello OC)
+- 'Chipped1.obj’ e ‘Acceptable.obj’ (mesh modello IC e modello OC)
 - ‘LinearFEM.m’ (funzione Matlab per il calcolo del LBS)
 - ‘matlabmesh’ (toolkit utile per il caricamento delle mesh in Matlab)
 - ‘generazione_mesh.m’ (script per la generazione delle mesh simulate)
